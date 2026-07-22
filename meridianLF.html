@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meridian — Location Relay Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0a0e14;
+    --panel: #10161f;
+    --panel-raised: #141b26;
+    --border: #212b39;
+    --border-soft: #1a222e;
+    --cyan: #35e7c5;
+    --cyan-dim: rgba(53,231,197,0.12);
+    --amber: #ffaa4a;
+    --amber-dim: rgba(255,170,74,0.12);
+    --text-primary: #eaf0f6;
+    --text-secondary: #8996a8;
+    --text-muted: #576375;
+    --danger: #ff5d6c;
+    --danger-dim: rgba(255,93,108,0.12);
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+  }
+ 
+  *{ box-sizing: border-box; }
+ 
+  body{
+    margin:0;
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 15% -10%, rgba(53,231,197,0.06), transparent 40%),
+      radial-gradient(circle at 85% 110%, rgba(255,170,74,0.05), transparent 40%);
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 32px 24px 64px;
+  }
+ 
+  .wrap{ max-width: 900px; margin: 0 auto; }
+ 
+  /* ---------- Topbar ---------- */
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--border-soft);
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{
+    width:38px; height:38px; border-radius: 10px;
+    background: linear-gradient(145deg, var(--cyan), var(--amber));
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:16px; color:#0a0e14;
+    flex-shrink:0;
+  }
+  .brand-text h1{
+    font-family:'Space Grotesk', sans-serif; font-size:20px; font-weight:600;
+    margin:0; letter-spacing:0.2px;
+  }
+  .brand-text p{
+    margin:2px 0 0; font-size:12.5px; color: var(--text-secondary);
+    letter-spacing: 0.3px; text-transform: uppercase;
+  }
+  .topbar-right{ display:flex; align-items:center; gap:14px; }
+  .clock{
+    font-family:'JetBrains Mono', monospace; font-size:13px; color: var(--text-secondary);
+    padding: 8px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--panel);
+  }
+  .status-pill{
+    display:flex; align-items:center; gap:7px;
+    font-size:12.5px; font-weight:500; color: var(--cyan);
+    padding: 8px 14px; border-radius: var(--radius-sm);
+    background: var(--cyan-dim); border: 1px solid rgba(53,231,197,0.25);
+  }
+  .status-dot{
+    width:7px; height:7px; border-radius:50%; background: var(--cyan);
+    box-shadow: 0 0 0 0 rgba(53,231,197,0.5);
+    animation: pulse-dot 2s infinite;
+  }
+  @keyframes pulse-dot{
+    0%{ box-shadow: 0 0 0 0 rgba(53,231,197,0.45); }
+    70%{ box-shadow: 0 0 0 7px rgba(53,231,197,0); }
+    100%{ box-shadow: 0 0 0 0 rgba(53,231,197,0); }
+  }
+ 
+  /* ---------- Tabs ---------- */
+  .tabs{ display:flex; gap:8px; margin-bottom:24px; }
+  .tab-btn{
+    padding:10px 18px; border-radius: var(--radius-sm); border: 1px solid var(--border-soft);
+    background: var(--panel); color: var(--text-secondary); font-family:'Inter', sans-serif;
+    font-weight:600; font-size:13.5px; cursor:pointer; display:flex; align-items:center; gap:8px;
+    transition: opacity 0.12s ease;
+  }
+  .tab-btn svg{ width:16px; height:16px; }
+  .tab-btn.active{ background: var(--cyan-dim); color: var(--cyan); border-color: rgba(53,231,197,0.3); }
+  .tab-btn .count{
+    background: rgba(255,255,255,0.08); padding:1px 7px; border-radius:20px; font-size:11.5px;
+  }
+  .tab-btn.active .count{ background: rgba(53,231,197,0.2); }
+ 
+  .view{ display:none; }
+  .view.active{ display:block; }
+ 
+  .panel{
+    background: var(--panel);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: 26px 26px 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .panel.transmit{ border-top: 2px solid var(--cyan); max-width: 520px; margin: 0 auto; }
+ 
+  .panel-head{ display:flex; align-items:flex-start; justify-content:space-between; margin-bottom: 22px; position:relative; z-index:2;}
+  .panel-eyebrow{
+    font-size:11.5px; font-weight:600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--cyan);
+  }
+  .panel-title{
+    font-family:'Space Grotesk', sans-serif; font-size: 19px; font-weight:600; margin: 6px 0 0;
+  }
+  .panel-sub{ font-size: 13px; color: var(--text-secondary); margin: 6px 0 0; line-height:1.5; max-width: 320px;}
+ 
+  .role-icon{
+    width: 40px; height:40px; border-radius: 10px; background: var(--cyan-dim);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .role-icon svg{ width:20px; height:20px; }
+ 
+  /* Radar sweep, signature element for transmit panel */
+  .radar{
+    position:absolute; top:-90px; right:-90px; width: 260px; height:260px;
+    pointer-events:none; z-index:1; opacity: 0.5;
+  }
+  .radar-ring{
+    position:absolute; inset:0; border-radius:50%; border: 1px solid rgba(53,231,197,0.14);
+  }
+  .radar-ring.r2{ inset: 34px; }
+  .radar-ring.r3{ inset: 68px; }
+  .radar-sweep{
+    position:absolute; inset:0; border-radius:50%;
+    background: conic-gradient(from 0deg, rgba(53,231,197,0.35), transparent 28%);
+    animation: spin 3.2s linear infinite;
+    display:none;
+  }
+  .radar.active .radar-sweep{ display:block; }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+ 
+  /* ---------- Buttons ---------- */
+  .btn{
+    width:100%;
+    display:flex; align-items:center; justify-content:center; gap:9px;
+    font-family:'Inter', sans-serif; font-size: 14.5px; font-weight:600;
+    padding: 13px 18px; border-radius: var(--radius-sm);
+    border: none; cursor:pointer;
+    transition: transform 0.12s ease, opacity 0.12s ease;
+    position:relative; z-index:2;
+  }
+  .btn:active{ transform: scale(0.98); }
+  .btn svg{ width:17px; height:17px; }
+  .btn-cyan{ background: var(--cyan); color:#062a24; }
+  .btn-cyan:hover{ opacity:0.9; }
+  .btn:disabled{ opacity:0.5; cursor:not-allowed; }
+ 
+  /* ---------- Readout ---------- */
+  .readout{
+    margin-top: 22px; position:relative; z-index:2;
+    background: var(--panel-raised); border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md); padding: 18px 20px;
+  }
+  .readout-empty{
+    text-align:center; padding: 22px 8px; color: var(--text-muted); font-size:13.5px; line-height:1.6;
+  }
+  .readout-empty svg{ width:26px; height:26px; margin-bottom:8px; opacity:0.6; }
+ 
+  .coord-row{ display:flex; gap:14px; }
+  .coord-box{ flex:1; }
+  .coord-label{ font-size:11px; color: var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px;}
+  .coord-value{ font-family:'JetBrains Mono', monospace; font-size: 19px; font-weight:500; color: var(--cyan); }
+ 
+  .meta-row{
+    display:flex; justify-content:space-between; margin-top:16px; padding-top:14px;
+    border-top: 1px solid var(--border-soft); font-size:12.5px; color: var(--text-secondary);
+  }
+  .meta-row span b{ color: var(--text-primary); font-weight:500; font-family:'JetBrains Mono', monospace; }
+ 
+  .link-card{
+    margin-top:16px; display:flex; align-items:center; gap:10px;
+    background: var(--panel); border: 1px solid var(--border-soft);
+    border-radius: var(--radius-sm); padding: 10px 12px;
+  }
+  .link-card .link-text{
+    flex:1; min-width:0; font-family:'JetBrains Mono', monospace; font-size:12.5px;
+    color: var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .link-card button{
+    flex-shrink:0; border:none; cursor:pointer; font-size:12px; font-weight:600;
+    padding:7px 12px; border-radius: 6px; background: var(--cyan-dim); color: var(--cyan);
+    display:flex; align-items:center; gap:5px; transition: opacity 0.12s ease;
+  }
+  .link-card button:hover{ opacity:0.85; }
+  .link-card button svg{ width:14px; height:14px; }
+ 
+  .error-box{
+    margin-top:16px; background: var(--danger-dim); border:1px solid rgba(255,93,108,0.3);
+    border-radius: var(--radius-sm); padding: 12px 14px; font-size:13px; color:#ffb3ba; display:none;
+  }
+ 
+  /* ---------- History ---------- */
+  .history-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+  .history-head h2{ font-family:'Space Grotesk', sans-serif; font-size:19px; font-weight:600; margin:0; }
+  .history-head p{ font-size:13px; color: var(--text-secondary); margin:4px 0 0; }
+  .clear-btn{
+    border:1px solid var(--border); background:transparent; color: var(--text-secondary);
+    font-size:12.5px; font-weight:600; padding:8px 14px; border-radius: var(--radius-sm); cursor:pointer;
+  }
+  .clear-btn:hover{ border-color: var(--danger); color: var(--danger); }
+ 
+  .history-empty{
+    text-align:center; padding: 60px 20px; color: var(--text-muted); font-size:14px;
+    border: 1px dashed var(--border); border-radius: var(--radius-lg);
+  }
+  .history-empty svg{ width:30px; height:30px; margin-bottom:10px; opacity:0.6; }
+ 
+  .history-item{
+    display:flex; align-items:center; gap:16px; padding:16px 18px;
+    border: 1px solid var(--border-soft); border-radius: var(--radius-md);
+    background: var(--panel); margin-bottom:10px;
+  }
+  .history-index{
+    width:34px; height:34px; border-radius:9px; background: var(--cyan-dim); color: var(--cyan);
+    font-family:'JetBrains Mono', monospace; font-size:13px; font-weight:600;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .history-main{ flex:1; min-width:0; }
+  .history-coords{ font-family:'JetBrains Mono', monospace; font-size:14px; color: var(--text-primary); }
+  .history-meta{ font-size:12px; color: var(--text-secondary); margin-top:3px; }
+  .history-link{
+    font-family:'JetBrains Mono', monospace; font-size:11.5px; color: var(--text-muted);
+    margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;
+  }
+  .history-actions{ display:flex; gap:8px; flex-shrink:0; }
+  .history-actions a, .history-actions button{
+    border:none; cursor:pointer; font-size:12px; font-weight:600; text-decoration:none;
+    padding:8px 12px; border-radius:7px; display:flex; align-items:center; gap:5px;
+  }
+  .open-btn{ background: var(--amber-dim); color: var(--amber); }
+  .open-btn:hover{ opacity:0.85; }
+  .copy-btn{ background: rgba(255,255,255,0.06); color: var(--text-secondary); }
+  .copy-btn:hover{ color: var(--text-primary); }
+  .history-actions svg{ width:14px; height:14px; }
+ 
+  @media (max-width: 640px){
+    .history-item{ flex-wrap:wrap; }
+    .history-actions{ width:100%; }
+    .history-actions a, .history-actions button{ flex:1; justify-content:center; }
+  }
+ 
+  .footnote{
+    margin-top: 28px; text-align:center; font-size:12px; color: var(--text-muted);
+    line-height:1.6;
+  }
+  .footnote code{ background: var(--panel); padding:2px 6px; border-radius:4px; font-family:'JetBrains Mono', monospace; }
+</style>
+</head>
+<body>
+<div class="wrap">
+ 
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">M</div>
+      <div class="brand-text">
+        <h1>Meridian</h1>
+        <p>Location relay console</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="clock" id="clock">--:--:--</div>
+      <div class="status-pill"><span class="status-dot"></span>Console online</div>
+    </div>
+  </div>
+ 
+  <div class="tabs">
+    <button class="tab-btn active" id="tabSendBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+      Send location
+    </button>
+    <button class="tab-btn" id="tabHistoryBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      History
+      <span class="count" id="historyCount">0</span>
+    </button>
+  </div>
+ 
+  <!-- SEND VIEW -->
+  <div class="view active" id="sendView">
+    <div class="panel transmit">
+      <div class="radar" id="radar">
+        <div class="radar-ring"></div>
+        <div class="radar-ring r2"></div>
+        <div class="radar-ring r3"></div>
+        <div class="radar-sweep"></div>
+      </div>
+ 
+      <div class="panel-head">
+        <div>
+          <div class="panel-eyebrow">Sender</div>
+          <h2 class="panel-title">Share your location</h2>
+          <p class="panel-sub">Generates a Google Maps link to your current position and logs it to history.</p>
+        </div>
+        <div class="role-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#35e7c5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+        </div>
+      </div>
+ 
+      <button class="btn btn-cyan" id="shareBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+        Send location
+      </button>
+ 
+      <div class="readout" id="transmitReadout">
+        <div class="readout-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#576375" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+          <div>No signal sent yet. Tap "Send location" to broadcast your position.</div>
+        </div>
+      </div>
+ 
+      <div class="error-box" id="transmitError"></div>
+    </div>
+  </div>
+ 
+  <!-- HISTORY VIEW -->
+  <div class="view" id="historyView">
+    <div class="history-head">
+      <div>
+        <h2>Location history</h2>
+        <p>Every location this sender has broadcast, most recent first.</p>
+      </div>
+      <button class="clear-btn" id="clearHistoryBtn">Clear history</button>
+    </div>
+    <div id="historyList"></div>
+  </div>
+ 
+  <div class="footnote">
+    Every send is logged to history and relayed through the browser's local storage.<br>
+    In production, POST each entry to your backend (FastAPI or Django REST) instead, and load this tab from a <code>GET /api/location/history</code> endpoint.
+  </div>
+ 
+</div>
+ 
+<script>
+  // ---------- Clock ----------
+  function tickClock(){
+    document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-GB', { hour12:false });
+  }
+  tickClock();
+  setInterval(tickClock, 1000);
+ 
+  // ---------- Tabs ----------
+  const tabSendBtn = document.getElementById('tabSendBtn');
+  const tabHistoryBtn = document.getElementById('tabHistoryBtn');
+  const sendView = document.getElementById('sendView');
+  const historyView = document.getElementById('historyView');
+ 
+  function showTab(tab){
+    const isSend = tab === 'send';
+    sendView.classList.toggle('active', isSend);
+    historyView.classList.toggle('active', !isSend);
+    tabSendBtn.classList.toggle('active', isSend);
+    tabHistoryBtn.classList.toggle('active', !isSend);
+    if(!isSend) renderHistory();
+  }
+  tabSendBtn.addEventListener('click', () => showTab('send'));
+  tabHistoryBtn.addEventListener('click', () => showTab('history'));
+ 
+  // ---------- Storage ----------
+  const HISTORY_KEY = 'meridian_location_history';
+ 
+  function loadHistory(){
+    const raw = localStorage.getItem(HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }
+  function saveHistory(list){
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+  }
+  function addToHistory(entry){
+    const list = loadHistory();
+    list.unshift(entry);
+    saveHistory(list);
+    updateHistoryCount();
+  }
+  function updateHistoryCount(){
+    document.getElementById('historyCount').textContent = loadHistory().length;
+  }
+ 
+  // ---------- Helpers ----------
+  function formatCoord(v){ return v.toFixed(6); }
+ 
+  function timeAgo(ts){
+    const diff = Math.max(0, Date.now() - ts);
+    const s = Math.floor(diff/1000);
+    if(s < 5) return 'just now';
+    if(s < 60) return s + 's ago';
+    const m = Math.floor(s/60);
+    if(m < 60) return m + 'm ago';
+    const h = Math.floor(m/60);
+    return h + 'h ago';
+  }
+  function formatDateTime(ts){
+    return new Date(ts).toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+  }
+ 
+  // Google's official Maps URL API — opens directly to the exact coordinates.
+  function mapLinkUrl(lat, lng){
+    return 'https://www.google.com/maps/search/?api=1&query=' + lat + ',' + lng;
+  }
+ 
+  async function copyLink(url, btn){
+    try{
+      await navigator.clipboard.writeText(url);
+      const original = btn.innerHTML;
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Copied';
+      setTimeout(() => { btn.innerHTML = original; }, 1600);
+    }catch(e){
+      alert('Copy this link:\n' + url);
+    }
+  }
+ 
+  // ---------- Sender logic ----------
+  const shareBtn = document.getElementById('shareBtn');
+  const transmitReadout = document.getElementById('transmitReadout');
+  const transmitError = document.getElementById('transmitError');
+  const radar = document.getElementById('radar');
+ 
+  function renderTransmit(loc){
+    const link = mapLinkUrl(loc.lat, loc.lng);
+    transmitReadout.innerHTML =
+      '<div class="coord-row">' +
+        '<div class="coord-box"><div class="coord-label">Latitude</div><div class="coord-value">' + formatCoord(loc.lat) + '</div></div>' +
+        '<div class="coord-box"><div class="coord-label">Longitude</div><div class="coord-value">' + formatCoord(loc.lng) + '</div></div>' +
+      '</div>' +
+      '<div class="meta-row">' +
+        '<span>Accuracy <b>±' + Math.round(loc.accuracy) + 'm</b></span>' +
+        '<span>Sent <b id="txTime">' + timeAgo(loc.timestamp) + '</b></span>' +
+      '</div>' +
+      '<div class="link-card">' +
+        '<span class="link-text">' + link + '</span>' +
+        '<button type="button" id="copyLinkBtn">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+          'Copy' +
+        '</button>' +
+      '</div>';
+    document.getElementById('copyLinkBtn').addEventListener('click', (e) => copyLink(link, e.currentTarget));
+  }
+ 
+  function handleLocationSuccess(pos){
+    const loc = {
+      lat: pos.coords.latitude,
+      lng: pos.coords.longitude,
+      accuracy: pos.coords.accuracy,
+      timestamp: Date.now()
+    };
+    renderTransmit(loc);
+    addToHistory(loc);
+    transmitError.style.display = 'none';
+    resetShareButton();
+  }
+ 
+  function handleGeoError(err){
+    let msg = "Couldn't read your location. Check your device's location permissions and try again.";
+    if(err.code === 1) msg = 'Location access was denied. Allow location permissions for this site to broadcast.';
+    if(err.code === 3) msg = 'Location request timed out. Try again in a moment.';
+    transmitError.textContent = msg;
+    transmitError.style.display = 'block';
+    resetShareButton();
+  }
+ 
+  function resetShareButton(){
+    shareBtn.disabled = false;
+    radar.classList.remove('active');
+  }
+ 
+  shareBtn.addEventListener('click', () => {
+    if(!navigator.geolocation){
+      transmitError.textContent = 'This browser does not support location sharing.';
+      transmitError.style.display = 'block';
+      return;
+    }
+    shareBtn.disabled = true;
+    radar.classList.add('active');
+    transmitError.style.display = 'none';
+    navigator.geolocation.getCurrentPosition(handleLocationSuccess, handleGeoError, { enableHighAccuracy:true, timeout:10000 });
+  });
+ 
+  // Refresh "sent Xs ago" label periodically
+  setInterval(() => {
+    const txTimeEl = document.getElementById('txTime');
+    if(txTimeEl){
+      const list = loadHistory();
+      if(list.length) txTimeEl.textContent = timeAgo(list[0].timestamp);
+    }
+  }, 1000);
+ 
+  // ---------- History rendering ----------
+  const historyList = document.getElementById('historyList');
+  const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+ 
+  function renderHistory(){
+    const list = loadHistory();
+    if(!list.length){
+      historyList.innerHTML =
+        '<div class="history-empty">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="#576375" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>' +
+          '<div>No locations sent yet. Head to "Send location" to log your first one.</div>' +
+        '</div>';
+      return;
+    }
+    historyList.innerHTML = list.map((loc, i) => {
+      const link = mapLinkUrl(loc.lat, loc.lng);
+      const idx = list.length - i;
+      return (
+        '<div class="history-item">' +
+          '<div class="history-index">#' + idx + '</div>' +
+          '<div class="history-main">' +
+            '<div class="history-coords">' + formatCoord(loc.lat) + ', ' + formatCoord(loc.lng) + '</div>' +
+            '<div class="history-meta">' + formatDateTime(loc.timestamp) + ' · accuracy ±' + Math.round(loc.accuracy) + 'm</div>' +
+            '<div class="history-link">' + link + '</div>' +
+          '</div>' +
+          '<div class="history-actions">' +
+            '<a class="open-btn" href="' + link + '" target="_blank" rel="noopener">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>' +
+              'Open' +
+            '</a>' +
+            '<button class="copy-btn" type="button" data-link="' + link + '">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+              'Copy' +
+            '</button>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join('');
+ 
+    historyList.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => copyLink(e.currentTarget.dataset.link, e.currentTarget));
+    });
+  }
+ 
+  clearHistoryBtn.addEventListener('click', () => {
+    if(confirm('Clear all location history? This cannot be undone.')){
+      saveHistory([]);
+      updateHistoryCount();
+      renderHistory();
+    }
+  });
+ 
+  // Keep the tab badge in sync if history changes in another tab
+  window.addEventListener('storage', (e) => {
+    if(e.key === HISTORY_KEY){
+      updateHistoryCount();
+      if(historyView.classList.contains('active')) renderHistory();
+    }
+  });
+ 
+  updateHistoryCount();
+</script>
+</body>
+</html>
