@@ -1,1 +1,0 @@
-# meridian-location-finder
